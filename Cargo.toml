@@ -75,3 +75,7 @@ opt-level = 3
 lto = "thin"
 codegen-units = 16
 debug = 0
+
+# Whole-pixel glyph advances for sharper UI text at 1x (vendor/epaint/WORDCRAFT_PATCH.md).
+[patch.crates-io]
+epaint = { path = "vendor/epaint" }

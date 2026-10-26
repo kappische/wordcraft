@@ -52,7 +52,8 @@ impl Pen<'_> {
         self.p.circle_filled(self.pt(x, y), r * self.s(), c);
     }
     fn text(&self, x: f32, y: f32, size: f32, t: &str, c: Color32, bold: bool) {
-        let font = if bold { crate::theme::semibold(size * self.s()) } else { FontId::proportional(size * self.s()) };
+        // Icon letters keep their drawn size (the theme helpers scale UI text).
+        let font = if bold { FontId::new(size * self.s(), egui::FontFamily::Name("semibold".into())) } else { FontId::proportional(size * self.s()) };
         self.p.text(self.pt(x, y), egui::Align2::CENTER_CENTER, t, font, c);
     }
     /// Horizontal text lines (a paragraph).
