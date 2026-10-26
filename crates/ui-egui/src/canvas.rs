@@ -5,6 +5,7 @@
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
+use egui::emath::GuiRounding as _;
 use egui::{Color32, Pos2, Rect, Sense, Stroke, TextureHandle, Ui, pos2, vec2};
 use serde_json::json;
 use wordcraft_doc::{Pos, StoryRef};
@@ -196,7 +197,8 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
         let mut rects = Vec::with_capacity(geo.rects.len());
         let content_origin = ui.min_rect().min;
         for (i, pr) in geo.rects.iter().enumerate() {
-            let sr = pr.translate(content_origin.to_vec2());
+            // Start each page on a whole physical pixel so its texture maps 1:1 to the screen.
+            let sr = Rect::from_min_size((pr.min + content_origin.to_vec2()).round_to_pixels(ppp), pr.size());
             rects.push(sr);
             if !sr.intersects(ui.clip_rect().expand(200.0)) {
                 continue;
@@ -233,7 +235,14 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
                 ui.ctx().request_repaint();
             }
             if let Some((_, tex)) = app.canvas.textures.get(&i) {
-                painter.image(tex.id(), sr, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
+                // Draw at the texture's own pixel size (its sides are rounded up) instead of stretching it to
+                // the fractional page rect, which blurs the text; fall back to the page rect for a stale texture.
+                let [tw, th] = tex.size();
+                let tex_size = vec2(tw as f32, th as f32) / ppp;
+                let d = tex_size - sr.size();
+                let exact = (-0.01..=1.01 / ppp).contains(&d.x) && (-0.01..=1.01 / ppp).contains(&d.y);
+                let dest = if exact { Rect::from_min_size(sr.min, tex_size) } else { sr };
+                painter.image(tex.id(), dest, Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)), Color32::WHITE);
             }
             // Header/footer editing chrome.
             if let StoryRef::Part(id) = app.session.sel.focus.story {

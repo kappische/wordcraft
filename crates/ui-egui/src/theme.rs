@@ -155,19 +155,29 @@ pub fn install_fonts(ctx: &egui::Context) {
     ctx.set_fonts(fonts);
 }
 
+/// UI text is drawn 4% larger than its nominal size (body 12.5 → 13 pt) so stems get whole pixels at 1x.
+const UI_TEXT_SCALE: f32 = 13.0 / 12.5;
+
 pub fn medium(size: f32) -> FontId {
-    FontId::new(size, FontFamily::Name("medium".into()))
+    FontId::new(size * UI_TEXT_SCALE, FontFamily::Name("medium".into()))
 }
 pub fn semibold(size: f32) -> FontId {
-    FontId::new(size, FontFamily::Name("semibold".into()))
+    FontId::new(size * UI_TEXT_SCALE, FontFamily::Name("semibold".into()))
 }
 pub fn regular(size: f32) -> FontId {
-    FontId::proportional(size)
+    FontId::proportional(size * UI_TEXT_SCALE)
 }
 
 /// Apply tokens to egui's style.
 pub fn apply(ctx: &egui::Context, t: &Tokens) {
     let mut v = if t.dark { Visuals::dark() } else { Visuals::light() };
+    // Whole-pixel glyph positions: egui's subpixel binning (on by default) blurs UI text.
+    v.text_options.subpixel_binning = false;
+    // egui's light theme uses raw glyph coverage, which leaves dark-on-light text thin and grey at 1x;
+    // lift the edge alpha so stems read solid (its dark theme already does the same).
+    if !t.dark {
+        v.text_options.color_transfer_function = egui::epaint::FontColorTransferFunction::Gamma(0.6);
+    }
     v.panel_fill = t.ribbon;
     v.window_fill = t.menu;
     v.extreme_bg_color = t.input;
